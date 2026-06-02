@@ -1,0 +1,88 @@
+---
+- name: Setup AsiaHub server
+  hosts: asiahub
+  become: true
+
+  vars:
+    app_user: asiahub
+    app_dir: /opt/asiahub/app
+    repo_url: https://github.com/Andreww-uni/AsiaHub.git
+
+  tasks:
+    - name: Install curl and git
+      apt:
+        name:
+          - curl
+          - git
+        state: present
+        update_cache: true
+
+    - name: Add NodeSource repository
+      shell: curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+      args:
+        creates: /etc/apt/sources.list.d/nodesource.sources
+
+    - name: Install Node.js
+      apt:
+        name: nodejs
+        state: present
+
+    - name: Create asiahub system user
+      user:
+        name: "{{ app_user }}"
+        system: true
+        shell: /bin/bash
+        home: /home/{{ app_user }}
+        create_home: true
+
+    - name: Create application directories
+      file:
+        path: "{{ item }}"
+        state: directory
+        owner: "{{ app_user }}"
+        group: "{{ app_user }}"
+        mode: '0750'
+      loop:
+        - /opt/asiahub
+        - /opt/asiahub/logs
+
+    - name: Add safe directory for git
+      command: git config --global --add safe.directory {{ app_dir }}
+      args:
+        creates: /opt/asiahub/app/.git
+
+    - name: Clone AsiaHub repository
+      git:
+        repo: "{{ repo_url }}"
+        dest: "{{ app_dir }}"
+        update: false
+
+    - name: Set ownership of app directory
+      file:
+        path: "{{ app_dir }}"
+        state: directory
+        owner: "{{ app_user }}"
+        group: "{{ app_user }}"
+        recurse: true
+
+    - name: Install npm dependencies
+      command: npm install
+      args:
+        chdir: "{{ app_dir }}/server"
+        creates: "{{ app_dir }}/server/node_modules"
+
+    - name: Create .env file
+      copy:
+        dest: "{{ app_dir }}/server/.env"
+        owner: "{{ app_user }}"
+        group: "{{ app_user }}"
+        mode: '0600'
+        content: |
+          PORT=5000
+          DB_HOST=localhost
+          DB_PORT=5432
+          DB_NAME=asiahub
+          DB_USER=postgres
+          DB_PASSWORD={{ db_password }}
+          JWT_SECRET={{ jwt_secret }}
+          JWT_EXPIRES_IN=7d
