@@ -1,0 +1,19 @@
+# Ansible vault та секрети
+*.vault
+vault_pass.txt
+secrets.yml
+
+# SSH ключі
+*.pem
+*.key
+
+# Vagrant
+.vagrant/
+
+# Змінні середовища
+.env
+*.env
+
+# OS
+.DS_Store
+Thumbs.db
