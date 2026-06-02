@@ -1,0 +1,17 @@
+[Unit]
+Description=AsiaHub Node.js Application
+After=network.target
+
+[Service]
+Type=simple
+User=asiahub
+WorkingDirectory={{ app_dir }}/server
+ExecStart=/usr/bin/node src/index.js
+EnvironmentFile={{ app_dir }}/server/.env
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

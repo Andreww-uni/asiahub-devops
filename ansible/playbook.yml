@@ -71,6 +71,27 @@
         chdir: "{{ app_dir }}/server"
         creates: "{{ app_dir }}/server/node_modules"
 
+    - name: Deploy systemd unit file
+      template:
+        src: templates/asiahub.service.j2
+        dest: /etc/systemd/system/asiahub.service
+        owner: root
+        group: root
+        mode: '0644'
+      notify: Reload systemd
+
+    - name: Enable and start asiahub service
+      systemd:
+        name: asiahub
+        enabled: true
+        state: started
+        daemon_reload: true
+
+  handlers:
+    - name: Reload systemd
+      systemd:
+        daemon_reload: true
+
     - name: Create .env file
       copy:
         dest: "{{ app_dir }}/server/.env"
