@@ -1,4 +1,5 @@
 ---
+BROKEN_LINE: this is intentionally broken
 - name: Setup AsiaHub server
   hosts: asiahub
   become: true
