@@ -1,0 +1,11 @@
+[Unit]
+Description=AsiaHub Monitor Timer
+After=network.target
+
+[Timer]
+OnBootSec=60
+OnUnitActiveSec=60
+Unit=asiahub-monitor.service
+
+[Install]
+WantedBy=timers.target

@@ -145,6 +145,47 @@
       environment:
         DB_PASSWORD: "{{ db_password }}"
 
+    - name: Create scripts directory
+      file:
+        path: /opt/asiahub/scripts
+        state: directory
+        owner: root
+        group: root
+        mode: '0755'
+
+    - name: Deploy monitor script
+      copy:
+        src: scripts/monitor.sh
+        dest: /opt/asiahub/scripts/monitor.sh
+        owner: root
+        group: root
+        mode: '0755'
+
+    - name: Deploy monitor systemd service
+      template:
+        src: templates/asiahub-monitor.service.j2
+        dest: /etc/systemd/system/asiahub-monitor.service
+        owner: root
+        group: root
+        mode: '0644'
+      notify: Reload systemd
+
+    - name: Deploy monitor systemd timer
+      template:
+        src: templates/asiahub-monitor.timer.j2
+        dest: /etc/systemd/system/asiahub-monitor.timer
+        owner: root
+        group: root
+        mode: '0644'
+      notify: Reload systemd
+
+    - name: Enable and start monitor timer
+      systemd:
+        name: asiahub-monitor.timer
+        enabled: true
+        state: started
+        daemon_reload: true
+
   handlers:
     - name: Reload systemd
       systemd:
