@@ -87,6 +87,64 @@
         state: started
         daemon_reload: true
 
+    - name: Install docker dependencies
+      apt:
+        name:
+          - apt-transport-https
+          - ca-certificates
+          - curl
+          - software-properties-common
+        state: present
+
+    - name: Add Docker GPG key
+      apt_key:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        state: present
+
+    - name: Add Docker repository
+      apt_repository:
+        repo: deb https://download.docker.com/linux/ubuntu jammy stable
+        state: present
+
+    - name: Install Docker
+      apt:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+          - docker-compose-plugin
+        state: present
+        update_cache: true
+
+    - name: Add vagrant user to docker group
+      user:
+        name: vagrant
+        groups: docker
+        append: true
+
+    - name: Copy docker-compose.yml to server
+      copy:
+        src: ../docker-compose.yml
+        dest: /opt/asiahub/docker-compose.yml
+        owner: vagrant
+        group: vagrant
+        mode: '0644'
+
+    - name: Copy database.sql to server
+      copy:
+        src: ../database.sql
+        dest: /opt/asiahub/database.sql
+        owner: vagrant
+        group: vagrant
+        mode: '0644'
+
+    - name: Start PostgreSQL container
+      community.docker.docker_compose_v2:
+        project_src: /opt/asiahub
+        state: present
+      environment:
+        DB_PASSWORD: "{{ db_password }}"
+
   handlers:
     - name: Reload systemd
       systemd:
