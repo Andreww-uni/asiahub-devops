@@ -1,0 +1,103 @@
+name: AsiaHub CI/CD Pipeline
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  lint:
+    name: Lint Ansible
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Ansible tools
+        run: pip install ansible ansible-lint
+
+      - name: Check Ansible syntax
+        run: ansible-playbook ansible/playbook.yml --syntax-check -i ansible/inventory.ini
+
+      - name: Run ansible-lint
+        run: ansible-lint --profile min ansible/playbook.yml
+
+  test:
+    name: Test Node.js server
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout AsiaHub repository
+        uses: actions/checkout@v4
+        with:
+          repository: Andreww-uni/AsiaHub
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install server dependencies
+        run: npm ci
+        working-directory: server
+
+      - name: Check Node.js syntax
+        run: node --check src/index.js
+        working-directory: server
+  build:
+    name: Build React client
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout AsiaHub repository
+        uses: actions/checkout@v4
+        with:
+          repository: Andreww-uni/AsiaHub
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install client dependencies
+        run: npm ci
+        working-directory: client
+
+      - name: Build React app
+        run: npm run build
+        working-directory: client
+
+  deploy:
+    name: Deploy with Ansible
+    needs: [lint, test, build]
+    if: github.ref == 'refs/heads/main' && vars.ENABLE_DEPLOY == 'true' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    runs-on: self-hosted
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Ansible
+        run: pip install ansible
+
+      - name: Configure SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H "${{ secrets.SERVER_IP }}" >> ~/.ssh/known_hosts
+
+      - name: Run Ansible deploy
+        run: |
+          ansible-playbook -i ansible/inventory.ini ansible/playbook.yml \
+            -e "db_password=${{ secrets.DB_PASSWORD }}" \
+            -e "jwt_secret=${{ secrets.JWT_SECRET }}"
